@@ -42,9 +42,21 @@ const DEFAULT_SETTINGS: AppSettings = {
   dueDate: 11,
 };
 
+const SYNC_STATE_VERSION = 1;
+const SHARED_STATE_URL = import.meta.env.VITE_SHARED_STATE_URL?.trim() || '';
+const SHARED_STATE_TOKEN = import.meta.env.VITE_SHARED_STATE_TOKEN?.trim() || '';
+const SHARED_STATE_METHOD = (import.meta.env.VITE_SHARED_STATE_METHOD?.trim() || 'PUT').toUpperCase();
+
+type SyncMethod = 'PUT' | 'POST' | 'PATCH';
+const allowedSyncMethods: SyncMethod[] = ['PUT', 'POST', 'PATCH'];
+const resolvedSyncMethod: SyncMethod = allowedSyncMethods.includes(SHARED_STATE_METHOD as SyncMethod)
+  ? SHARED_STATE_METHOD as SyncMethod
+  : 'PUT';
+
 interface AppState {
   // Auth
   currentUserId: string | null;
+  lastDataUpdateAt: string;
   
   // Data
   members: Member[];
@@ -130,13 +142,152 @@ interface AppState {
   getTotalInterestCollected: () => number;
   getDefaulterNames: () => string[];
   canApplyLoan: (memberId: string) => boolean;
+  getMemberMaxLoan: (memberId: string) => number;
   toggleMemberActive: (memberId: string, inactiveDate?: string) => void;
 }
 
+type PersistedStateSlice = Pick<
+  AppState,
+  | 'currentUserId'
+  | 'members'
+  | 'loans'
+  | 'contributions'
+  | 'penalties'
+  | 'manualInterests'
+  | 'notifications'
+  | 'settings'
+  | 'language'
+  | 'lastDataUpdateAt'
+>;
+
+interface SharedStateEnvelope {
+  version: number;
+  updatedAt: string;
+  state: PersistedStateSlice;
+}
+
+const pickPersistedState = (state: AppState): PersistedStateSlice => ({
+  currentUserId: state.currentUserId,
+  members: state.members,
+  loans: state.loans,
+  contributions: state.contributions,
+  penalties: state.penalties,
+  manualInterests: state.manualInterests,
+  notifications: state.notifications,
+  settings: state.settings,
+  language: state.language,
+  lastDataUpdateAt: state.lastDataUpdateAt,
+});
+
+const getSyncHeaders = () => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (SHARED_STATE_TOKEN) headers.Authorization = `Bearer ${SHARED_STATE_TOKEN}`;
+  return headers;
+};
+
+const isCloudSyncEnabled = () => !!SHARED_STATE_URL;
+
+const parseSharedEnvelope = (payload: unknown): SharedStateEnvelope | null => {
+  if (!payload || typeof payload !== 'object') return null;
+  if ('state' in (payload as Record<string, unknown>)) {
+    const envelope = payload as Partial<SharedStateEnvelope>;
+    if (!envelope.state || typeof envelope.state !== 'object') return null;
+    return {
+      version: typeof envelope.version === 'number' ? envelope.version : SYNC_STATE_VERSION,
+      updatedAt: typeof envelope.updatedAt === 'string' ? envelope.updatedAt : new Date(0).toISOString(),
+      state: envelope.state as PersistedStateSlice,
+    };
+  }
+  return {
+    version: SYNC_STATE_VERSION,
+    updatedAt: new Date(0).toISOString(),
+    state: payload as PersistedStateSlice,
+  };
+};
+
+const fetchSharedState = async (): Promise<SharedStateEnvelope | null> => {
+  if (!isCloudSyncEnabled()) return null;
+  try {
+    const response = await fetch(SHARED_STATE_URL, {
+      method: 'GET',
+      headers: getSyncHeaders(),
+      cache: 'no-store',
+    });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    return parseSharedEnvelope(payload);
+  } catch {
+    return null;
+  }
+};
+
+const pushSharedState = async (state: AppState): Promise<void> => {
+  if (!isCloudSyncEnabled()) return;
+  const body: SharedStateEnvelope = {
+    version: SYNC_STATE_VERSION,
+    updatedAt: state.lastDataUpdateAt,
+    state: pickPersistedState(state),
+  };
+  try {
+    await fetch(SHARED_STATE_URL, {
+      method: resolvedSyncMethod,
+      headers: getSyncHeaders(),
+      body: JSON.stringify(body),
+      keepalive: true,
+    });
+  } catch {
+    // No-op: local persistence remains primary fallback.
+  }
+};
+
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+let isApplyingRemoteState = false;
+let isPushInFlight = false;
+let hasQueuedPush = false;
+
 export const useStore = create<AppState>()(
   persist(
-    (set, get) => ({
+    (rawSet, get) => {
+      const flushSharedPush = async () => {
+        if (!isCloudSyncEnabled() || isPushInFlight) return;
+        isPushInFlight = true;
+        await pushSharedState(get());
+        isPushInFlight = false;
+        if (hasQueuedPush) {
+          hasQueuedPush = false;
+          await flushSharedPush();
+        }
+      };
+
+      const queueSharedPush = () => {
+        if (!isCloudSyncEnabled() || isApplyingRemoteState) return;
+        if (syncTimer) clearTimeout(syncTimer);
+        syncTimer = setTimeout(() => {
+          if (isPushInFlight) {
+            hasQueuedPush = true;
+            return;
+          }
+          void flushSharedPush();
+        }, 600);
+      };
+
+      const set: typeof rawSet = (partial, replace) => {
+        let hasMutated = false;
+        rawSet((previous) => {
+          const update = typeof partial === 'function' ? partial(previous) : partial;
+          if (update === previous || update == null) return previous;
+          hasMutated = true;
+          if (replace) return update;
+          const patch = update as Partial<AppState>;
+          if ('lastDataUpdateAt' in patch) return patch;
+          return { ...patch, lastDataUpdateAt: new Date().toISOString() };
+        }, replace);
+        if (hasMutated) queueSharedPush();
+      };
+
+      return {
       currentUserId: null,
+      lastDataUpdateAt: new Date().toISOString(),
       members: DEFAULT_MEMBERS.map((m, i) => ({ ...m, id: `member_${i}_${m.mobile}` })),
       loans: [],
       contributions: [],
@@ -851,7 +1002,8 @@ export const useStore = create<AppState>()(
           ),
         }));
       },
-    }),
+      };
+    },
     {
       name: 'shg-bank-storage',
       merge: (persisted, current) => {
@@ -884,3 +1036,37 @@ export const useStore = create<AppState>()(
     }
   )
 );
+
+const asTimestamp = (value?: string) => {
+  if (!value) return 0;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const hydrateFromSharedState = async () => {
+  if (!isCloudSyncEnabled()) return;
+  const remote = await fetchSharedState();
+  if (!remote?.state) return;
+
+  const local = useStore.getState();
+  const remoteTimestamp = Math.max(asTimestamp(remote.updatedAt), asTimestamp(remote.state.lastDataUpdateAt));
+  const localTimestamp = asTimestamp(local.lastDataUpdateAt);
+
+  if (remoteTimestamp <= localTimestamp) {
+    if (remoteTimestamp === 0 && localTimestamp > 0) {
+      await pushSharedState(local);
+    }
+    return;
+  }
+
+  isApplyingRemoteState = true;
+  useStore.setState({
+    ...remote.state,
+    lastDataUpdateAt: remote.state.lastDataUpdateAt || remote.updatedAt,
+  });
+  isApplyingRemoteState = false;
+};
+
+if (typeof window !== 'undefined') {
+  void hydrateFromSharedState();
+}
