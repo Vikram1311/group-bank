@@ -100,6 +100,24 @@ export default function AdminPanel() {
   const adminInterestShare = adminMember ? store.getMemberInterestShare(adminMember.id) : 0;
   const adminTotalEarnings = adminPenaltyShare + adminInterestShare;
 
+  const normalizeWhatsappPhone = (mobile: string) => {
+    const digits = mobile.replace(/\D/g, '');
+    if (digits.length === 10) return `91${digits}`;
+    if (digits.length === 12 && digits.startsWith('91')) return digits;
+    return digits;
+  };
+
+  const getMessageRecipientPhones = (type: 'broadcast' | 'loan_holder') => {
+    const targetMembers = type === 'broadcast'
+      ? nonAdminMembers
+      : nonAdminMembers.filter(m => store.loans.some(l => l.memberId === m.id && (l.status === 'active' || l.status === 'pending')));
+    return Array.from(new Set(
+      targetMembers
+        .map(m => normalizeWhatsappPhone(m.mobile))
+        .filter(phone => phone.length >= 10),
+    ));
+  };
+
   const handleAddMember = () => {
     if (!newName || !newMobile || !newJoiningDate) return;
     store.addMember(newName, newMobile, newJoiningDate);
@@ -159,11 +177,13 @@ export default function AdminPanel() {
     if (!trimmedMessage) return;
     setMessageSendFeedback('');
     store.addNotification(trimmedMessage, messageType);
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(trimmedMessage)}`;
+    const recipientPhones = getMessageRecipientPhones(messageType);
+    const whatsappUrl = recipientPhones.length === 1
+      ? `https://api.whatsapp.com/send?phone=${recipientPhones[0]}&text=${encodeURIComponent(trimmedMessage)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(trimmedMessage)}`;
     const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     if (!popup) {
       setMessageSendFeedback(t('whatsappPopupBlocked'));
-      setMessageText('');
       return;
     }
     setMessageText('');
