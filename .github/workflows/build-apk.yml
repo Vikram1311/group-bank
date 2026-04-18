@@ -49,6 +49,10 @@ jobs:
       - name: Add Capacitor Android platform
         run: npx cap add android
 
+      # ── 5a. Generate launcher icons & splash from resources/ folder ─────────
+      - name: Generate Android icons and splash screen
+        run: npx @capacitor/assets generate --android
+
       - name: Sync Capacitor
         run: npx cap sync android
 
