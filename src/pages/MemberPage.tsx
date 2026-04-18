@@ -110,9 +110,12 @@ export default function MemberPage() {
   const btnDanger = `${btn3d} bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 shadow-lg shadow-red-500/30`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 pb-24">
       {/* Header */}
-      <header className="bg-gradient-to-r from-purple-900 via-indigo-900 to-blue-900 shadow-2xl">
+      <header
+        className="bg-gradient-to-r from-purple-900 via-indigo-900 to-blue-900 shadow-2xl"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px))' }}
+      >
         <div className="max-w-lg mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -462,7 +465,10 @@ export default function MemberPage() {
       </div>
 
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-white/10 z-50">
+      <nav
+        className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-white/10 z-50"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px))' }}
+      >
         <div className="max-w-lg mx-auto flex justify-around py-2">
           {([
             { key: 'dashboard' as MemberTab, icon: <TrendingUp className="w-5 h-5" />, label: t('summary') },
