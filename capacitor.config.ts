@@ -20,7 +20,9 @@ const config: CapacitorConfig = {
       : {}),
   },
   server: {
-    // Use local bundled assets (no live-reload) for production APK
+    // Load live web app from Vercel so the APK never needs rebuilding after UI changes
+    url: 'https://group-bank-3gguqmo10-vikram1311s-projects.vercel.app',
+    cleartext: false,
     androidScheme: 'https',
   },
 };
