@@ -196,7 +196,7 @@ export default function AdminPanel() {
       {/* Header */}
       <header
         className="bg-gradient-to-r from-blue-900 via-indigo-900 to-purple-900 shadow-2xl sticky top-0 z-50"
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px))' }}
       >
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -558,7 +558,7 @@ export default function AdminPanel() {
       {/* Bottom Nav */}
       <nav
         className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-white/10 z-50"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="max-w-lg mx-auto flex justify-around py-2">
           {([
