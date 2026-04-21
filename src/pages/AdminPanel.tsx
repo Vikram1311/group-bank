@@ -241,7 +241,7 @@ export default function AdminPanel() {
         className="bg-gradient-to-r from-blue-900 via-indigo-900 to-purple-900 shadow-2xl sticky top-0 z-50"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px))' }}
       >
-        <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="max-w-7xl mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
@@ -430,8 +430,7 @@ export default function AdminPanel() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {/* Active/Inactive Toggle */}
+                  <div className="flex items-center flex-wrap gap-1.5">
                     {member.isActive ? (
                       <button
                         onClick={() => { setInactiveDate(new Date().toISOString().split('T')[0]); setShowInactiveModal(member.id); }}
@@ -463,9 +462,9 @@ export default function AdminPanel() {
         {/* Loans */}
         {activeTab === 'loans' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-start flex-wrap gap-2">
               <h2 className="text-white font-bold text-xl">{t('loans')}</h2>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap justify-end">
                 <button onClick={() => setShowAddInterest(true)} className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 text-sm rounded-xl flex items-center gap-2 transition"><Plus className="w-4 h-4" /> {t('addManualInterest')}</button>
                 <button onClick={() => setShowInterestHistory(true)} className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 text-sm rounded-xl flex items-center gap-2 transition"><Eye className="w-4 h-4" /> {t('interestHistory')}</button>
                 <button onClick={() => setShowAddOldLoan(true)} className={`${btnW} px-4 py-2 text-sm flex items-center gap-2`}><Plus className="w-4 h-4" /> {t('addOldLoan')}</button>
@@ -560,7 +559,7 @@ export default function AdminPanel() {
               <div key={n.id} className="bg-white/5 backdrop-blur rounded-xl p-4 border border-white/10">
                 <div className="flex items-start gap-3">
                   <Bell className="w-5 h-5 text-blue-400 mt-0.5" />
-                  <div><p className="text-white">{n.message}</p><p className="text-gray-400 text-xs mt-1">{formatDate(n.date)} • {n.type === 'broadcast' ? t('broadcast') : t('loanHolders')}</p></div>
+                  <div><p className="text-white">{n.message}</p><p className="text-gray-400 text-xs mt-1">{formatDate(n.date)} • {n.type === 'broadcast' ? t('broadcast') : n.type === 'loan_application' ? t('loanApplication') : t('loanHolders')}</p></div>
                 </div>
               </div>
             ))}

@@ -56,7 +56,7 @@ export default function MemberPage() {
   const canLoan = store.canApplyLoan(member.id);
   const memberMaxLoan = store.getMemberMaxLoan(member.id);
   const defaulters = store.getDefaulterNames();
-  const notifications = store.notifications.filter(n => !n.targetMemberId || n.targetMemberId === member.id);
+  const notifications = store.notifications.filter(n => n.type !== 'loan_application' && (!n.targetMemberId || n.targetMemberId === member.id));
   const pendingContrib = myContributions.filter(c => c.status === 'pending' && c.approvedByMember);
 
   const loanDetails = loanAmount ? calculateLoanDetails(Number(loanAmount), Number(loanMonths)) : null;
@@ -130,7 +130,7 @@ export default function MemberPage() {
         className="bg-gradient-to-r from-purple-900 via-indigo-900 to-blue-900 shadow-2xl"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px))' }}
       >
-        <div className="max-w-lg mx-auto px-4 py-4">
+        <div className="max-w-lg mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-yellow-400 shadow-lg relative cursor-pointer" onClick={() => fileInputRef.current?.click()}>
@@ -167,8 +167,7 @@ export default function MemberPage() {
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 py-4">
-        {/* Dashboard Tab */}
+      <div className="max-w-lg mx-auto px-4 py-3">
         {activeTab === 'dashboard' && (
           <div className="space-y-4">
             {/* Inactive Banner */}

@@ -115,7 +115,7 @@ interface AppState {
   setLanguage: (lang: 'hi' | 'en' | 'ta') => void;
   
   // Notifications
-  addNotification: (message: string, type: 'broadcast' | 'loan_holder', targetMemberId?: string) => void;
+  addNotification: (message: string, type: 'broadcast' | 'loan_holder' | 'loan_application', targetMemberId?: string) => void;
   
   // CSV Export
   exportMemberCSV: (memberId: string) => string;
@@ -397,6 +397,10 @@ export const useStore = create<AppState>()(
         };
         loan.emiHistory = loan.emiHistory.map(e => ({ ...e, loanId: loan.id }));
         set(s => ({ loans: [...s.loans, loan] }));
+        get().addNotification(
+          `ऋण आवेदन: ${member.name} ने ₹${amount} (${months} माह) के लिए आवेदन किया`,
+          'loan_application'
+        );
       },
 
       recallLoan: (loanId) => {
