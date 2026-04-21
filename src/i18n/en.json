@@ -154,5 +154,6 @@
   "accountInactive": "Your account is inactive. Contact admin.",
   "inactiveMemberBanner": "Your account is inactive — you cannot add new monthly contributions",
   "inactiveFundEarning": "Your deposited fund is still earning interest ✅",
-  "whatsappLinkedHint": "After saving, WhatsApp will open. From there, send the message to the selected members."
+  "whatsappLinkedHint": "After saving, WhatsApp will open. From there, send the message to the selected members.",
+  "loanApplication": "Loan Application"
 }

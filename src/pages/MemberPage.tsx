@@ -56,7 +56,7 @@ export default function MemberPage() {
   const canLoan = store.canApplyLoan(member.id);
   const memberMaxLoan = store.getMemberMaxLoan(member.id);
   const defaulters = store.getDefaulterNames();
-  const notifications = store.notifications.filter(n => !n.targetMemberId || n.targetMemberId === member.id);
+  const notifications = store.notifications.filter(n => n.type !== 'loan_application' && (!n.targetMemberId || n.targetMemberId === member.id));
   const pendingContrib = myContributions.filter(c => c.status === 'pending' && c.approvedByMember);
 
   const loanDetails = loanAmount ? calculateLoanDetails(Number(loanAmount), Number(loanMonths)) : null;

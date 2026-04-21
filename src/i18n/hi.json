@@ -154,5 +154,6 @@
   "accountInactive": "आपका खाता निष्क्रिय है। एडमिन से संपर्क करें।",
   "inactiveMemberBanner": "आपका खाता निष्क्रिय है — आप नई मासिक योगदान नहीं दे सकते",
   "inactiveFundEarning": "आपका जमा फंड अभी भी ब्याज कमा रहा है ✅",
-  "whatsappLinkedHint": "सेव करने के बाद WhatsApp खुलेगा। वहाँ से चयनित सदस्यों को संदेश भेज दें।"
+  "whatsappLinkedHint": "सेव करने के बाद WhatsApp खुलेगा। वहाँ से चयनित सदस्यों को संदेश भेज दें।",
+  "loanApplication": "ऋण आवेदन"
 }

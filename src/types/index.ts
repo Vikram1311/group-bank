@@ -93,7 +93,7 @@ export interface Notification {
   targetMemberId?: string;
   message: string;
   date: string;
-  type: 'broadcast' | 'loan_holder';
+  type: 'broadcast' | 'loan_holder' | 'loan_application';
 }
 
 export interface MemberShare {

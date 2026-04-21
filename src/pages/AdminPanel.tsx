@@ -541,7 +541,7 @@ export default function AdminPanel() {
               <div key={n.id} className="bg-white/5 backdrop-blur rounded-xl p-4 border border-white/10">
                 <div className="flex items-start gap-3">
                   <Bell className="w-5 h-5 text-blue-400 mt-0.5" />
-                  <div><p className="text-white">{n.message}</p><p className="text-gray-400 text-xs mt-1">{formatDate(n.date)} • {n.type === 'broadcast' ? t('broadcast') : t('loanHolders')}</p></div>
+                  <div><p className="text-white">{n.message}</p><p className="text-gray-400 text-xs mt-1">{formatDate(n.date)} • {n.type === 'broadcast' ? t('broadcast') : n.type === 'loan_application' ? t('loanApplication') : t('loanHolders')}</p></div>
                 </div>
               </div>
             ))}
