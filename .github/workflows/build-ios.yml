@@ -1,0 +1,282 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+# Write permission is needed for GitHub Release creation on version tags
+permissions:
+  contents: write
+
+jobs:
+  build-ios:
+    name: Build iOS App (signed IPA or simulator fallback)
+    runs-on: macos-latest
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node / npm setup ───────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # ── 3. Build web assets ───────────────────────────────────────────────
+      - name: Build web app (Vite)
+        run: npm run build
+
+      # ── 4. Capacitor – add, generate assets, sync iOS platform ────────────
+      - name: Add Capacitor iOS platform
+        run: npx cap add ios
+
+      - name: Generate iOS icons and splash screen
+        run: npx @capacitor/assets generate --ios
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      # ── 5. Detect signing secrets ─────────────────────────────────────────
+      - name: Detect signing secrets
+        id: signing
+        env:
+          IOS_DISTRIBUTION_CERT_BASE64:    ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_TEAM_ID:                     ${{ secrets.IOS_TEAM_ID }}
+        run: |
+          if [ -n "$IOS_DISTRIBUTION_CERT_BASE64" ] && \
+             [ -n "$IOS_PROVISIONING_PROFILE_BASE64" ] && \
+             [ -n "$IOS_TEAM_ID" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── 6. Detect App Store Connect API key (for TestFlight upload) ───────
+      - name: Detect App Store Connect API key
+        id: asc
+        env:
+          IOS_ASC_API_KEY_ID:          ${{ secrets.IOS_ASC_API_KEY_ID }}
+          IOS_ASC_API_KEY_ISSUER_ID:   ${{ secrets.IOS_ASC_API_KEY_ISSUER_ID }}
+          IOS_ASC_API_KEY_PRIVATE_KEY: ${{ secrets.IOS_ASC_API_KEY_PRIVATE_KEY }}
+        run: |
+          if [ -n "$IOS_ASC_API_KEY_ID" ] && \
+             [ -n "$IOS_ASC_API_KEY_ISSUER_ID" ] && \
+             [ -n "$IOS_ASC_API_KEY_PRIVATE_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ══════════════════════════════════════════════════════════════════════
+      #  SIGNED IPA PATH  (runs when IOS_DISTRIBUTION_CERT_BASE64 etc. set)
+      # ══════════════════════════════════════════════════════════════════════
+
+      # ── 7a. Import distribution certificate ───────────────────────────────
+      - name: Import distribution certificate into temporary keychain
+        if: steps.signing.outputs.available == 'true'
+        env:
+          IOS_DISTRIBUTION_CERT_BASE64:  ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
+          IOS_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 16)"
+
+          # Create a temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Decode and import the P12 certificate
+          echo "$IOS_DISTRIBUTION_CERT_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" \
+            -P "$IOS_DISTRIBUTION_CERT_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          # Allow xcodebuild to access the keychain
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
+
+      # ── 7b. Install provisioning profile ──────────────────────────────────
+      - name: Install App Store provisioning profile
+        if: steps.signing.outputs.available == 'true'
+        env:
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_PATH"
+          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/app.mobileprovision"
+          # Decode the signed CMS envelope once, reuse the plist content for both fields
+          PLIST_CONTENT=$(security cms -D -i "$RUNNER_TEMP/app.mobileprovision")
+          UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID'  /dev/stdin <<< "$PLIST_CONTENT")
+          NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name'  /dev/stdin <<< "$PLIST_CONTENT")
+          # Xcode discovers profiles by UUID filename
+          cp "$RUNNER_TEMP/app.mobileprovision" "$PROFILE_PATH/$UUID.mobileprovision"
+          echo "PROVISIONING_PROFILE_UUID=$UUID" >> "$GITHUB_ENV"
+          # PROVISIONING_PROFILE_SPECIFIER expects the human-readable profile Name
+          echo "PROVISIONING_PROFILE_NAME=$NAME" >> "$GITHUB_ENV"
+
+      # ── 7c. Build xcarchive ────────────────────────────────────────────────
+      - name: Build xcarchive (signed – App Store distribution)
+        if: steps.signing.outputs.available == 'true'
+        env:
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+        run: |
+          xcodebuild archive \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/SHGBank.xcarchive" \
+            DEVELOPMENT_TEAM="$IOS_TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_NAME" \
+            CODE_SIGNING_REQUIRED=YES \
+            | xcpretty || true
+
+      # ── 7d. Export IPA ─────────────────────────────────────────────────────
+      - name: Export signed IPA
+        if: steps.signing.outputs.available == 'true'
+        env:
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+        run: |
+          # Generate ExportOptions.plist
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${IOS_TEAM_ID}</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>compileBitcode</key>
+            <false/>
+            <key>destination</key>
+            <string>export</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.groupbank.shg</key>
+              <string>${PROVISIONING_PROFILE_NAME}</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/SHGBank.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/ipa-export" \
+            | xcpretty || true
+
+          IPA=$(find "$RUNNER_TEMP/ipa-export" -name "*.ipa" | head -n 1)
+          echo "IPA_PATH=$IPA" >> "$GITHUB_ENV"
+
+      # ── 7e. (Optional) Upload to TestFlight via App Store Connect API ──────
+      - name: Upload IPA to TestFlight
+        if: >
+          steps.signing.outputs.available == 'true' &&
+          steps.asc.outputs.available == 'true' &&
+          startsWith(github.ref, 'refs/tags/v')
+        env:
+          IOS_ASC_API_KEY_ID:          ${{ secrets.IOS_ASC_API_KEY_ID }}
+          IOS_ASC_API_KEY_ISSUER_ID:   ${{ secrets.IOS_ASC_API_KEY_ISSUER_ID }}
+          IOS_ASC_API_KEY_PRIVATE_KEY: ${{ secrets.IOS_ASC_API_KEY_PRIVATE_KEY }}
+        run: |
+          # Write the API private key to disk (expected path by altool/notarytool)
+          mkdir -p ~/.private_keys
+          echo "$IOS_ASC_API_KEY_PRIVATE_KEY" > ~/.private_keys/AuthKey_${IOS_ASC_API_KEY_ID}.p8
+
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey  "$IOS_ASC_API_KEY_ID" \
+            --apiIssuer "$IOS_ASC_API_KEY_ISSUER_ID"
+
+      # ── 7f. Upload IPA as workflow artifact ───────────────────────────────
+      - name: Upload IPA artifact
+        if: steps.signing.outputs.available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: shg-bank-ios-ipa
+          path: ${{ env.IPA_PATH }}
+          retention-days: 30
+
+      # ── 7g. Create GitHub Release with IPA (only on version tags) ─────────
+      - name: Create GitHub Release (IPA)
+        if: >
+          steps.signing.outputs.available == 'true' &&
+          startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.IPA_PATH }}
+          generate_release_notes: true
+          body: |
+            ## SHG Bank iOS App
+
+            ### Install via TestFlight
+            This build has been submitted to TestFlight automatically.
+            Accept the TestFlight invite and install from there.
+
+            ### Manual IPA install (requires a Mac + Apple Configurator 2)
+            1. Download the `.ipa` file attached below.
+            2. Connect your iPhone, open **Apple Configurator 2** on Mac.
+            3. Drag-and-drop the `.ipa` onto your device.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ══════════════════════════════════════════════════════════════════════
+      #  UNSIGNED SIMULATOR FALLBACK  (runs when signing secrets are absent)
+      # ══════════════════════════════════════════════════════════════════════
+
+      # ── 8a. Build simulator app (unsigned) ────────────────────────────────
+      - name: Build iOS simulator app (unsigned – no signing secrets configured)
+        if: steps.signing.outputs.available == 'false'
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO
+
+      # ── 8b. Package and upload simulator artifact ─────────────────────────
+      - name: Package simulator app
+        if: steps.signing.outputs.available == 'false'
+        run: |
+          cd ios/build/Build/Products/Release-iphonesimulator
+          ditto -c -k --sequesterRsrc --keepParent App.app SHG-Bank-iOS-Simulator.app.zip
+
+      - name: Upload iOS simulator artifact
+        if: steps.signing.outputs.available == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: shg-bank-ios-simulator-app
+          path: ios/build/Build/Products/Release-iphonesimulator/SHG-Bank-iOS-Simulator.app.zip
+          retention-days: 30
+
+      # ── 9. Clean up keychain ──────────────────────────────────────────────
+      - name: Delete temporary keychain
+        if: steps.signing.outputs.available == 'true' && always()
+        run: security delete-keychain "$KEYCHAIN_PATH" || true
