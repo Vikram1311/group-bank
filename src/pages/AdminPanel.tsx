@@ -445,7 +445,7 @@ export default function AdminPanel() {
           <div className="space-y-4">
             <div className="flex justify-between items-start flex-wrap gap-2">
               <h2 className="text-white font-bold text-xl">{t('loans')}</h2>
-            <div className="flex gap-2 flex-wrap justify-end">
+              <div className="flex gap-2 flex-wrap justify-end">
                 <button onClick={() => setShowAddInterest(true)} className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 text-sm rounded-xl flex items-center gap-2 transition"><Plus className="w-4 h-4" /> {t('addManualInterest')}</button>
                 <button onClick={() => setShowInterestHistory(true)} className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 text-sm rounded-xl flex items-center gap-2 transition"><Eye className="w-4 h-4" /> {t('interestHistory')}</button>
                 <button onClick={() => setShowAddOldLoan(true)} className={`${btnW} px-4 py-2 text-sm flex items-center gap-2`}><Plus className="w-4 h-4" /> {t('addOldLoan')}</button>
