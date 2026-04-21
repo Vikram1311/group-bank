@@ -5,8 +5,6 @@ import { generateId, getDefaultPassword, calculateLoanDetails, getMonthKey, getC
 
 const DEFAULT_MEMBERS: Omit<Member, 'id'>[] = [
   { name: 'ADMIN', mobile: '9315341037', password: '1311', joiningDate: '2025-09-10', isAdmin: true, isActive: true, language: 'hi' },
-  { name: 'KARAN', mobile: '9654662362', password: '2362', joiningDate: '2025-09-10', isAdmin: false, isActive: true },
-  { name: 'RAJU', mobile: '9990173980', password: '3980', joiningDate: '2025-09-10', isAdmin: false, isActive: true },
   { name: 'NISHA', mobile: '9711321568', password: '1568', joiningDate: '2025-09-10', isAdmin: false, isActive: true },
   { name: 'MEENA', mobile: '9289137685', password: '7685', joiningDate: '2025-09-10', isAdmin: false, isActive: true },
   { name: 'REKHA', mobile: '7678253940', password: '3940', joiningDate: '2025-09-10', isAdmin: false, isActive: true },
@@ -41,6 +39,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   lateFeePerDay: 10,
   dueDate: 11,
 };
+
+const REMOVED_MEMBER_MOBILES = new Set(['9654662362', '9990173980']);
 
 const SYNC_STATE_VERSION = 1;
 const SHARED_STATE_URL = import.meta.env.VITE_SHARED_STATE_URL?.trim() || '';
@@ -1017,6 +1017,19 @@ export const useStore = create<AppState>()(
       name: 'shg-bank-storage',
       merge: (persisted, current) => {
         const state = { ...current, ...(persisted as Partial<typeof current>) };
+        const removedMemberIds = new Set(
+          state.members
+            .filter(m => REMOVED_MEMBER_MOBILES.has(m.mobile))
+            .map(m => m.id)
+        );
+        if (removedMemberIds.size > 0) {
+          state.members = state.members.filter(m => !removedMemberIds.has(m.id));
+          state.loans = state.loans.filter(l => !removedMemberIds.has(l.memberId));
+          state.contributions = state.contributions.filter(c => !removedMemberIds.has(c.memberId));
+          state.penalties = state.penalties.filter(p => !removedMemberIds.has(p.memberId));
+          state.manualInterests = state.manualInterests.filter(i => !removedMemberIds.has(i.memberId));
+          state.notifications = state.notifications.filter(n => !n.targetMemberId || !removedMemberIds.has(n.targetMemberId));
+        }
         // Auto-recover POONAM if deleted
         if (!state.members.find(m => m.name === 'POONAM' && m.mobile === '9910466049')) {
           const existingPoonam = state.members.find(m => m.name === 'POONAM');
