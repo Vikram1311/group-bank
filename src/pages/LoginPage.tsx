@@ -37,7 +37,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src={shgBankBanner} alt="SHG BANK" className="w-full max-w-[280px] mx-auto rounded-xl shadow-2xl border border-white/10" />
+          <img src={shgBankBanner} alt="SHG BANK स्वयं सहायता समूह बैंक" className="w-full max-w-[280px] mx-auto rounded-xl shadow-2xl border border-white/10" />
         </div>
 
         {/* Login Card */}

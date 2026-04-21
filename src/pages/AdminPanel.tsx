@@ -245,7 +245,7 @@ export default function AdminPanel() {
         <div className="max-w-7xl mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={shgBankBanner} alt="SHG BANK" className="h-10 w-auto rounded-md border border-white/20" />
+              <img src={shgBankBanner} alt="SHG BANK स्वयं सहायता समूह बैंक" className="h-10 w-auto rounded-md border border-white/20" />
               <h1 className="text-white font-bold text-lg">{t('adminPanel')}</h1>
             </div>
             <div className="flex items-center gap-2">
