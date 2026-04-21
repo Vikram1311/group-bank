@@ -21,8 +21,12 @@ export function downloadCSV(content: string, filename: string) {
   const csvWithBom = '\ufeff' + content;
 
   // iOS Safari does not honour the `download` attribute on blob: URLs.
-  // Open a data: URI in a new tab instead; the user can save via the share sheet.
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  // iPadOS 13+ reports as "Macintosh" but still can't download blobs — detect it
+  // via the presence of touch support alongside a Mac UA string.
+  const ua = navigator.userAgent;
+  const isIOS =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (ua.includes('Mac') && 'ontouchend' in document);
   if (isIOS) {
     const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvWithBom);
     window.open(dataUri, '_blank');
