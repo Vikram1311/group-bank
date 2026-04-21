@@ -29,13 +29,14 @@ export function downloadCSV(content: string, filename: string) {
     (ua.includes('Mac') && 'ontouchend' in document);
   if (isIOS) {
     const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvWithBom);
-    window.open(dataUri, '_blank');
+    window.open(dataUri, '_blank', 'noopener,noreferrer');
     return;
   }
 
+  let url: string | undefined;
   try {
     const blob = new Blob([csvWithBom], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
 
     anchor.setAttribute('href', url);
@@ -47,14 +48,18 @@ export function downloadCSV(content: string, filename: string) {
 
     setTimeout(() => {
       try {
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(url!);
       } catch {
         // ignore cleanup errors
       }
     }, REVOKE_DELAY_MS);
   } catch {
+    // Revoke the object URL if it was created before the error occurred.
+    if (url) {
+      try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+    }
     // Fallback for any browser that can't handle blob: URLs — open in new tab.
     const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvWithBom);
-    window.open(dataUri, '_blank');
+    window.open(dataUri, '_blank', 'noopener,noreferrer');
   }
 }
