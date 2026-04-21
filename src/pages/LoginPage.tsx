@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { useTranslation } from 'react-i18next';
-import { Lock, Phone, Eye, EyeOff, Banknote } from 'lucide-react';
+import { Lock, Phone, Eye, EyeOff } from 'lucide-react';
+import shgBankBanner from '../assets/shg-bank-banner.svg';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -36,11 +37,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-3xl shadow-2xl shadow-orange-500/30 mb-4 transform hover:rotate-6 transition-transform">
-            <Banknote className="w-12 h-12 text-white" />
-          </div>
-          <h1 className="text-4xl font-extrabold text-white tracking-tight">SHG BANK</h1>
-          <p className="text-purple-200 mt-2 text-lg">स्वयं सहायता समूह बैंक</p>
+          <img src={shgBankBanner} alt="SHG BANK स्वयं सहायता समूह बैंक" className="w-full max-w-[280px] mx-auto rounded-xl shadow-2xl border border-white/10" />
         </div>
 
         {/* Login Card */}

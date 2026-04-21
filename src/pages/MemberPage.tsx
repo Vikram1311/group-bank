@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { formatCurrency, formatDate, getMonthKey, calculateLoanDetails, calculatePenaltyDays } from '../utils/calculations';
+import shgBankBanner from '../assets/shg-bank-banner.svg';
 import {
   IndianRupee, TrendingUp, Wallet, CreditCard, User, Lock, Camera,
   ChevronDown, ChevronUp, AlertTriangle, CheckCircle, Bell,
@@ -131,6 +132,9 @@ export default function MemberPage() {
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px))' }}
       >
         <div className="max-w-lg mx-auto px-4 py-2">
+          <div className="mb-2 flex justify-center">
+            <img src={shgBankBanner} alt="SHG BANK स्वयं सहायता समूह बैंक" className="h-9 w-auto rounded-md border border-white/20" />
+          </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="w-12 h-12 flex-shrink-0 rounded-full overflow-hidden border-2 border-yellow-400 shadow-lg relative cursor-pointer" onClick={() => fileInputRef.current?.click()}>

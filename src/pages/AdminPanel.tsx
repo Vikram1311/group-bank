@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { formatCurrency, formatDate, generateId, getMonthKey, getContributionDueDate, calculatePenaltyDays } from '../utils/calculations';
 import { calculateLoanDetails } from '../utils/calculations';
+import shgBankBanner from '../assets/shg-bank-banner.svg';
 import {
   Users, IndianRupee, TrendingUp, Wallet, LogOut, Plus, Trash2, Edit3, Download,
-  Send, Settings, Eye, CheckCircle, XCircle, Banknote,
+  Send, Settings, Eye, CheckCircle, XCircle,
   AlertTriangle, CreditCard, FileText, Bell, UserPlus
 } from 'lucide-react';
 
@@ -244,13 +245,8 @@ export default function AdminPanel() {
         <div className="max-w-7xl mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
-                <Banknote className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-white font-bold text-lg">SHG BANK - {t('adminPanel')}</h1>
-                <p className="text-blue-200 text-xs">स्वयं सहायता समूह बैंक</p>
-              </div>
+              <img src={shgBankBanner} alt="SHG BANK स्वयं सहायता समूह बैंक" className="h-10 w-auto rounded-md border border-white/20" />
+              <h1 className="text-white font-bold text-lg">{t('adminPanel')}</h1>
             </div>
             <div className="flex items-center gap-2">
               <select value={i18n.language} onChange={(e) => i18n.changeLanguage(e.target.value)} className="bg-white/10 border border-white/20 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none">
