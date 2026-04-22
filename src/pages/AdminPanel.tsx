@@ -263,6 +263,14 @@ export default function AdminPanel() {
         {/* Dashboard */}
         {activeTab === 'dashboard' && (
           <>
+            <div className="bg-white/5 backdrop-blur rounded-2xl p-3 mb-6 border border-white/10">
+              <img
+                src={shgBankBanner}
+                alt="SHG BANK स्वयं सहायता समूह बैंक"
+                className="w-full max-w-[300px] mx-auto rounded-xl shadow-lg border border-white/10"
+              />
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <StatCard icon={<IndianRupee className="w-6 h-6" />} label={t('totalCollection')} value={totalCollection} color="from-emerald-500 to-green-600" />
               <StatCard icon={<CreditCard className="w-6 h-6" />} label={t('totalLoansGiven')} value={totalLoansGiven} color="from-blue-500 to-indigo-600" />

@@ -174,6 +174,14 @@ export default function MemberPage() {
       <div className="max-w-lg mx-auto px-4 py-3">
         {activeTab === 'dashboard' && (
           <div className="space-y-4">
+            <div className="bg-white/5 backdrop-blur rounded-2xl p-3 border border-white/10">
+              <img
+                src={shgBankBanner}
+                alt="SHG BANK स्वयं सहायता समूह बैंक"
+                className="w-full max-w-[260px] mx-auto rounded-xl shadow-lg border border-white/10"
+              />
+            </div>
+
             {/* Inactive Banner */}
             {isInactive && (
               <div className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 border border-orange-500/30 rounded-2xl p-4">
