@@ -1177,7 +1177,7 @@ function MemberDetailModal({
                           {t(c.status)} {formatCurrency(c.amount)}
                         </span>
                         <button onClick={() => setShowEditContrib(c.id)} className="bg-blue-500/20 text-blue-400 p-1.5 rounded-lg hover:bg-blue-500/30"><Edit3 className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => { if (confirm(`${c.month} योगदान हटाएं?`)) store.deleteContribution(c.id); }} className="bg-red-500/20 text-red-400 p-1.5 rounded-lg hover:bg-red-500/30"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => { if (confirm(`${c.month} योगदान हटाएं? / Delete ${c.month} contribution?`)) store.deleteContribution(c.id); }} className="bg-red-500/20 text-red-400 p-1.5 rounded-lg hover:bg-red-500/30"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </div>
                   </div>
@@ -1209,7 +1209,7 @@ function MemberDetailModal({
                         <button onClick={() => setShowEMIDetail(loan.id)} className="bg-blue-500/20 text-blue-400 px-3 py-1.5 rounded-lg text-xs hover:bg-blue-500/30 flex items-center gap-1">
                           <Eye className="w-3 h-3" /> EMI
                         </button>
-                        <button onClick={() => { if (confirm(`${loan.memberName} का ये ऋण हटाएं?`)) store.deleteLoan(loan.id); }} className="bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg text-xs hover:bg-red-500/30 flex items-center gap-1">
+                        <button onClick={() => { if (confirm(`${loan.memberName} का ये ऋण हटाएं? / Delete ${loan.memberName}'s loan?`)) store.deleteLoan(loan.id); }} className="bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg text-xs hover:bg-red-500/30 flex items-center gap-1">
                           <Trash2 className="w-3 h-3" /> {t('delete')}
                         </button>
                       </div>
