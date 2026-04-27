@@ -163,7 +163,6 @@ interface AppState {
 
 type PersistedStateSlice = Pick<
   AppState,
-  | 'currentUserId'
   | 'members'
   | 'loans'
   | 'contributions'
@@ -172,7 +171,6 @@ type PersistedStateSlice = Pick<
   | 'notifications'
   | 'paymentRequests'
   | 'settings'
-  | 'language'
   | 'lastDataUpdateAt'
 >;
 
@@ -183,7 +181,6 @@ interface SharedStateEnvelope {
 }
 
 const pickPersistedState = (state: AppState): PersistedStateSlice => ({
-  currentUserId: state.currentUserId,
   members: state.members,
   loans: state.loans,
   contributions: state.contributions,
@@ -192,7 +189,6 @@ const pickPersistedState = (state: AppState): PersistedStateSlice => ({
   notifications: state.notifications,
   paymentRequests: state.paymentRequests,
   settings: state.settings,
-  language: state.language,
   lastDataUpdateAt: state.lastDataUpdateAt,
 });
 
@@ -336,13 +332,13 @@ export const useStore = create<AppState>()(
       login: (mobile, password) => {
         const member = get().members.find(m => m.mobile === mobile && m.password === password);
         if (member) {
-          set({ currentUserId: member.id });
+          rawSet({ currentUserId: member.id });
           return member;
         }
         return null;
       },
 
-      logout: () => set({ currentUserId: null }),
+      logout: () => rawSet({ currentUserId: null }),
 
       changePassword: (memberId, newPassword) => {
         set(s => ({
@@ -715,7 +711,7 @@ export const useStore = create<AppState>()(
         set(s => ({ settings: { ...s.settings, ...data } }));
       },
 
-      setLanguage: (lang) => set({ language: lang }),
+      setLanguage: (lang) => rawSet({ language: lang }),
 
       addNotification: (message, type, targetMemberId) => {
         const notification: Notification = {
@@ -1168,6 +1164,8 @@ const hydrateFromSharedState = async () => {
 
   useStore.setState({
     ...remote.state,
+    currentUserId: local.currentUserId,
+    language: local.language,
     lastDataUpdateAt: remote.state.lastDataUpdateAt ?? remote.updatedAt,
   });
 };
