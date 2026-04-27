@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
-import { useStore, hydrateFromSharedState, forceSyncWithRemote } from "./store/useStore";
+import { useStore, hydrateFromSharedState, forceSyncWithRemote, SHG_STORAGE_KEY } from "./store/useStore";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -23,7 +23,7 @@ createRoot(document.getElementById("root")!).render(
 //   window.__shg.importJSON('...')     // restore state from a JSON string
 // ────────────────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'shg-bank-storage';
+const STORAGE_KEY = SHG_STORAGE_KEY;
 
 declare global {
   interface Window {
@@ -41,7 +41,12 @@ const calibrationApi = {
   /** Return the full current Zustand state for inspection. */
   getState: () => useStore.getState(),
 
-  /** Patch the Zustand store directly (use with care). */
+  /**
+   * Patch the Zustand store directly (use with care).
+   * WARNING: This bypasses any action-level logic, computed derivations, and
+   * the Zustand persist middleware — the patch is written directly into memory.
+   * For a safe, persisted import use importJSON() instead.
+   */
   setState: (patch: Parameters<typeof useStore.setState>[0]) => useStore.setState(patch),
 
   /** Re-seed historical contribution records for eligible members. */
@@ -80,6 +85,14 @@ const calibrationApi = {
         ? (parsed.state as Record<string, unknown>)
         : parsed;
     useStore.setState(statePayload as Parameters<typeof useStore.setState>[0]);
+    // Persist to localStorage so the in-memory and stored states stay in sync.
+    // Wrap in the Zustand envelope format that the persist middleware expects.
+    const envelope = { state: useStore.getState(), version: 0 };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(envelope));
+    } catch (e) {
+      console.warn('[__shg] importJSON: could not write to localStorage', e);
+    }
     console.info('[__shg] importJSON: state applied ✓');
   },
 };
