@@ -48,6 +48,13 @@ const SHARED_STATE_TOKEN = import.meta.env.VITE_SHARED_STATE_TOKEN?.trim() || ''
 const SHARED_STATE_METHOD = (import.meta.env.VITE_SHARED_STATE_METHOD?.trim() || 'PUT').toUpperCase();
 const SYNC_DEBOUNCE_MS = 600;
 
+// JSONBin.io dedicated sync support
+const JSONBIN_BIN_ID = import.meta.env.VITE_JSONBIN_BIN_ID?.trim() || '';
+const JSONBIN_API_KEY = import.meta.env.VITE_JSONBIN_API_KEY?.trim() || '';
+const JSONBIN_READ_URL = JSONBIN_BIN_ID ? `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest` : '';
+const JSONBIN_WRITE_URL = JSONBIN_BIN_ID ? `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}` : '';
+const USE_JSONBIN = !!JSONBIN_BIN_ID;
+
 type SyncMethod = 'PUT' | 'POST' | 'PATCH';
 const allowedSyncMethods: SyncMethod[] = ['PUT', 'POST', 'PATCH'];
 const resolvedSyncMethod: SyncMethod = allowedSyncMethods.includes(SHARED_STATE_METHOD as SyncMethod)
@@ -189,13 +196,17 @@ const pickPersistedState = (state: AppState): PersistedStateSlice => ({
   lastDataUpdateAt: state.lastDataUpdateAt,
 });
 
-const getSyncHeaders = () => {
+const getSyncHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (SHARED_STATE_TOKEN) headers.Authorization = `Bearer ${SHARED_STATE_TOKEN}`;
+  if (USE_JSONBIN) {
+    if (JSONBIN_API_KEY) headers['X-Master-Key'] = JSONBIN_API_KEY;
+  } else if (SHARED_STATE_TOKEN) {
+    headers.Authorization = `Bearer ${SHARED_STATE_TOKEN}`;
+  }
   return headers;
 };
 
-const isCloudSyncEnabled = () => !!SHARED_STATE_URL;
+const isCloudSyncEnabled = () => USE_JSONBIN || !!SHARED_STATE_URL;
 
 const parseSharedEnvelope = (payload: unknown): SharedStateEnvelope | null => {
   if (!payload || typeof payload !== 'object') return null;
@@ -218,14 +229,20 @@ const parseSharedEnvelope = (payload: unknown): SharedStateEnvelope | null => {
 const fetchSharedState = async (): Promise<SharedStateEnvelope | null> => {
   if (!isCloudSyncEnabled()) return null;
   try {
-    const response = await fetch(SHARED_STATE_URL, {
+    const url = USE_JSONBIN ? JSONBIN_READ_URL : SHARED_STATE_URL;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getSyncHeaders(),
       cache: 'no-store',
     });
     if (!response.ok) return null;
     const payload = await response.json();
-    return parseSharedEnvelope(payload);
+    // JSONBin wraps the data inside a "record" key: { record: {...}, metadata: {...} }
+    const data =
+      USE_JSONBIN && payload && typeof payload === 'object' && 'record' in (payload as Record<string, unknown>)
+        ? (payload as { record: unknown }).record
+        : payload;
+    return parseSharedEnvelope(data);
   } catch {
     return null;
   }
@@ -239,8 +256,10 @@ const pushSharedState = async (state: AppState): Promise<void> => {
     state: pickPersistedState(state),
   };
   try {
-    await fetch(SHARED_STATE_URL, {
-      method: resolvedSyncMethod,
+    const url = USE_JSONBIN ? JSONBIN_WRITE_URL : SHARED_STATE_URL;
+    const method = USE_JSONBIN ? 'PUT' : resolvedSyncMethod;
+    await fetch(url, {
+      method,
       headers: getSyncHeaders(),
       body: JSON.stringify(body),
       keepalive: true,
