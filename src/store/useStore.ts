@@ -318,7 +318,7 @@ export const useStore = create<AppState>()(
 
       return {
       currentUserId: null,
-      lastDataUpdateAt: new Date().toISOString(),
+      lastDataUpdateAt: '1970-01-01T00:00:00.000Z',
       members: DEFAULT_MEMBERS.map((m, i) => ({ ...m, id: `member_${i}_${m.mobile}` })),
       loans: [],
       contributions: [],
@@ -1051,7 +1051,9 @@ export const useStore = create<AppState>()(
         });
 
         if (newContributions.length > 0) {
-          set(s => ({ contributions: [...s.contributions, ...newContributions] }));
+          // Use rawSet to avoid bumping lastDataUpdateAt and triggering a remote push.
+          // Seed data is local-only fallback; real data must come from the admin via cloud sync.
+          rawSet(s => ({ ...s, contributions: [...s.contributions, ...newContributions] }));
         }
       },
 
