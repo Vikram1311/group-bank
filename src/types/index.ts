@@ -105,6 +105,18 @@ export interface MemberShare {
   grandTotal: number;
 }
 
+export interface Transaction {
+  id: string;
+  memberId?: string;
+  memberName?: string;
+  type: 'contribution' | 'emi' | 'loan' | 'other';
+  amount: number;
+  date: string;
+  description?: string;
+  status?: string;
+  [key: string]: unknown;
+}
+
 export interface PaymentRequest {
   id: string;
   memberId: string;
