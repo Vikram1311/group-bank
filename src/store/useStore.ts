@@ -250,6 +250,8 @@ const pushSharedState = async (state: AppState): Promise<void> => {
   }
 };
 
+export const SHG_STORAGE_KEY = 'shg-bank-storage';
+
 export const useStore = create<AppState>()(
   persist(
     (rawSet, get) => {
@@ -1078,7 +1080,7 @@ export const useStore = create<AppState>()(
       };
     },
     {
-      name: 'shg-bank-storage',
+      name: SHG_STORAGE_KEY,
       merge: (persisted, current) => {
         const state = { ...current, ...(persisted as Partial<typeof current>) };
         const removedMemberIds = new Set(
